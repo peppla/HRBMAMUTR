@@ -22,3 +22,10 @@ Execute `vagrant up`
 * `ansible.cfg` (ansible configuration)
 * `mysql.yml` and `mongodb.yml` (playbooks to configure vm's)
 * `tungsten.ini.mongodb` and `tungsten.ini.mysql` (tungsten configuration files for each node)
+
+## Disclaimer
+Some security features are disabled
+
+Trivial or null passwords
+
+Do not use with sensitive data or production environments
