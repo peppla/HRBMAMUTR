@@ -1,0 +1,129 @@
+- hosts: all
+  become: true
+  tasks:
+  - name: set hostname
+    hostname:
+      name: mysql
+
+  - name: add mysql ip address to hosts file
+    lineinfile:
+      path: /etc/hosts
+      line: '192.168.56.210 mysql'
+
+  - name: add mongodb ip address to hosts file
+    lineinfile:
+      path: /etc/hosts
+      line: '192.168.56.211 mongodb'
+
+  - name: add repository for Percona Server
+    yum:
+      name: https://www.percona.com/redir/downloads/percona-release/redhat/percona-release-0.1-4.noarch.rpm
+      
+  - name: install the lastest version of Percona Server
+    yum:
+      name: Percona-Server-server-57
+      state: latest
+
+  - name: configure mysqld server id
+    ini_file:
+      path: /etc/percona-server.conf.d/mysqld.cnf
+      section: mysqld
+      state: present
+      option: server-id
+      value: 1
+
+  - name: configure mysqld binlog format row
+    ini_file:
+      path: /etc/percona-server.conf.d/mysqld.cnf
+      section: mysqld
+      state: present
+      option: binlog_format
+      value: row
+
+  - name: configure mysqld enable binary logging
+    ini_file:
+      path: /etc/percona-server.conf.d/mysqld.cnf
+      section: mysqld
+      state: present
+      option: log-bin
+      value: mysql-bin
+
+  - name: configure mysqld set character set
+    ini_file:
+      path: /etc/percona-server.conf.d/mysqld.cnf
+      section: mysqld
+      state: present
+      option: character-set-server
+      value: utf8
+
+  - name: configure mysqld collation-server
+    ini_file:
+      path: /etc/percona-server.conf.d/mysqld.cnf
+      section: mysqld
+      state: present
+      option: collation-server
+      value: utf8_general_ci
+
+  - name: configure mysqld default time zone UTC
+    ini_file:
+      path: /etc/percona-server.conf.d/mysqld.cnf
+      section: mysqld
+      state: present
+      option: default-time-zone
+      value: '+00:00'
+
+  - name: start mysqld
+    service:
+      name: mysqld
+      state: started
+
+  - name: remove root password from mysql
+    shell: mysql --connect-expired-password -u root -p`grep "temporary password" /var/log/mysqld.log | cut -d" " -f 11` -e "alter user root@localhost identified with mysql_native_password as '';"
+      
+  - name: uninstall validate_password plugin
+    shell: mysql -u root -e "uninstall plugin validate_password;"
+      
+  - name: create tungsten user
+    shell: mysql -u root -e "grant all privileges on *.* to tungsten@mysql identified by 'tungsten' with grant option;"
+      
+  - name: install the lastest version of jdk, ant, git, and ruby
+    yum:
+      name: java-1.7.0-openjdk-devel, ant, git, ruby
+      state: latest
+
+  - name: clone tungsten repository
+    git:
+      repo: https://github.com/continuent/tungsten-replicator
+      dest: /opt/tungsten/install
+      clone: yes
+
+  - name: build tungsten
+    command: ./build.sh
+    args:
+      chdir: /opt/tungsten/install/builder
+
+  - name: create /etc/tungsten directory
+    file:
+      path: /etc/tungsten
+      state: directory
+
+  - name: copy tungsten configuration
+    copy:
+      src: tungsten.ini.mysql
+      dest: /etc/tungsten/tungsten.ini
+
+  - name: Lets create a link for the latest version
+    shell: ln -s `ls -d /opt/tungsten/install/builder/build/*/ | head -1` /opt/tungsten/install/builder/build/latest
+
+  - name: configure tungsten
+    shell:  /opt/tungsten/install/builder/build/latest/tools/tpm install
+
+  - name: add tungsten variables to root user environment
+    lineinfile:
+      path: /root/.bash_profile
+      line: '. /opt/continuent/share/env.sh'
+
+  - name: start replicator
+    shell: /opt/continuent/tungsten/cluster-home/bin/startall
+
+ 

@@ -1,0 +1,7 @@
+controller ansible_connection=local
+mysql      ansible_ssh_host=192.168.56.210 ansible_ssh_private_key_file=.vagrant/machines/mysql/virtualbox/private_key
+mongodb    ansible_ssh_host=192.168.56.211 ansible_ssh_private_key_file=.vagrant/machines/mongodb/virtualbox/private_key
+
+[nodes]
+mysql
+mongodb

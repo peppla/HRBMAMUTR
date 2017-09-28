@@ -1,0 +1,14 @@
+[defaults]
+topology=master-slave
+install-directory=/opt/continuent
+enable-heterogeneous-service=true
+#property=replicator.filter.replicate.do=<schema>.<table>
+#repl-svc-applier-filters=replicate
+replication-user=tungsten
+replication-password=tungsten
+user=root
+
+[ple217]
+master=mysql
+slaves=mongodb
+datasource-type=mongodb

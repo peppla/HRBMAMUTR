@@ -1,0 +1,84 @@
+- hosts: all
+  become: true
+  tasks:
+
+  - name: set hostname
+    hostname:
+      name: mongodb
+
+  - name: add mysql ip address to hosts file
+    lineinfile:
+      path: /etc/hosts
+      line: '192.168.56.210 mysql'
+
+  - name: add mongodb ip address to hosts file
+    lineinfile:
+      path: /etc/hosts
+      line: '192.168.56.211 mongodb'
+
+  - name: add repository for mongodb
+    yum_repository:
+      name: mongo-org-3.4
+      description: MongoDB repository
+      baseurl: https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/3.4/x86_64/
+      gpgcheck: True
+      gpgkey: https://www.mongodb.org/static/pgp/server-3.4.asc
+      enabled: True
+      
+  - name: install the lastest version of mongodb
+    yum:
+      name: mongodb-org
+      state: latest
+
+  - name: make sure mongodb is listening all the addresses
+    lineinfile:
+      path: /etc/mongod.conf
+      regexp: '^( *)bindIp:( *)127.0.0.1'
+      state: absent
+
+  - name: start mongodb
+    service:
+      name: mongod
+      state: started
+      
+  - name: install the lastest version of jdk, ant, git, and ruby
+    yum:
+      name: java-1.7.0-openjdk-devel, ant, git, ruby
+      state: latest
+
+  - name: clone tungsten repository
+    git:
+      repo: https://github.com/continuent/tungsten-replicator
+      dest: /opt/tungsten/install
+      clone: yes
+
+  - name: build tungsten
+    command: ./build.sh
+    args:
+      chdir: /opt/tungsten/install/builder
+
+  - name: create /etc/tungsten directory
+    file:
+      path: /etc/tungsten
+      state: directory
+
+  - name: copy tungsten configuration
+    copy:
+      src: tungsten.ini.mongodb
+      dest: /etc/tungsten/tungsten.ini
+
+  - name: Lets create a link for the latest version
+    shell: ln -s `ls -d /opt/tungsten/install/builder/build/*/ | head -1` /opt/tungsten/install/builder/build/latest
+
+  - name: configure tungsten
+    shell:  /opt/tungsten/install/builder/build/latest/tools/tpm install
+
+  - name: add tungsten variables to root user environment
+    lineinfile:
+      path: /root/.bash_profile
+      line: '. /opt/continuent/share/env.sh'
+
+  - name: start replicator
+    shell: /opt/continuent/tungsten/cluster-home/bin/startall
+
+      

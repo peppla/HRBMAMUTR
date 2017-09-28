@@ -1,0 +1,17 @@
+[defaults]
+topology=master-slave
+install-directory=/opt/continuent
+enable-heterogeneous-service=true
+property=replicator.filter.pkey.addColumnsToDeletes=true
+property=replicator.filter.pkey.addPkeyToInserts=true
+replication-user=tungsten
+replication-password=tungsten
+user=root
+
+skip-validation-check=MySQLUnsupportedDataTypesCheck
+
+
+[ple217]
+master=mysql
+slaves=mongodb
+datasource-type=mysql
